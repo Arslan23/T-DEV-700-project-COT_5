@@ -1,7 +1,7 @@
 # attendance/utils/kpi_helpers.py
 from datetime import timedelta
 from django.utils import timezone
-from django.utils.translation import gettext_lazy as _
+#from django.utils.translation import gettext_lazy as _
 
 from attendance.constants import PeriodicityChoices, AttendanceStatusChoices
 from attendance.models import Attendance
