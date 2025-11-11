@@ -78,7 +78,7 @@ jobs:
 
       - name: Setup local settings for CI 
         run: |
-          cat > local_settings.py << 'EOF'
+          cat > core/local_settings.py << 'EOF'
           import os
     
           DEBUG = True
