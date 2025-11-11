@@ -77,7 +77,7 @@ jobs:
 
 
       - name: Setup local settings
-        run: cp local_settings_template.py local_settings.py
+        run: touch local_settings.py
         working-directory: ${{ env.BACKEND_CTX }}
 
       - name: Run linter (Ruff)
