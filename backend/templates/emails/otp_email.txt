@@ -1,0 +1,9 @@
+Bonjour {{ user.first_name|default:user.email }},
+
+Votre code de vérification est : {{ code }}
+
+Ce code expirera le {{ expires_at|date:"H:i" }}.
+
+Si vous n'êtes pas à l'origine de cette tentative de connexion, ignorez simplement ce message.
+
+— L'équipe {{ site_name }}

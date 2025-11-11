@@ -1,0 +1,170 @@
+.loading-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.video-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3rem;
+  width: 100%;
+  max-width: 800px;
+  padding: 2rem;
+  position: relative;
+}
+
+.logo-video {
+  width: 300px;
+  height: 300px;
+  max-width: 80vw;
+  max-height: 80vw;
+  object-fit: contain;
+  border-radius: 20px;
+  filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.3));
+}
+
+.wave-text {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  color: white;
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+  white-space: nowrap;
+}
+
+.wave-letter {
+  display: inline-block;
+  background: linear-gradient(145deg, #667eea, #764ba2, #f093fb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.progress-container {
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  color: #a0aec0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.waiting-message {
+  color: #a0aec0;
+  font-size: 1rem;
+  text-align: center;
+  font-style: italic;
+  margin-top: 1rem;
+}
+
+.particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: linear-gradient(145deg, #667eea, #764ba2);
+  border-radius: 50%;
+  filter: blur(1px);
+}
+
+@keyframes logoPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.3));
+  }
+  50% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 30px rgba(102, 126, 234, 0.6));
+  }
+}
+
+.logo-video {
+  animation: logoPulse 4s ease-in-out infinite;
+}
+
+@media (max-width: 768px) {
+  .video-wrapper {
+    gap: 2rem;
+    padding: 1rem;
+  }
+  
+  .logo-video {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .wave-text {
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+  }
+  
+  .progress-container {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-video {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .wave-text {
+    font-size: 1.4rem;
+  }
+  
+  .waiting-message {
+    font-size: 0.9rem;
+  }
+}

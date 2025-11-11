@@ -1,0 +1,14 @@
+<html>
+  <body style="font-family: Arial, sans-serif; color: #222;">
+    <h2>Vérification de connexion</h2>
+    <p>Bonjour {{ user.first_name|default:user.email }},</p>
+    <p>
+      Voici votre code de vérification à usage unique :
+      <strong style="font-size: 20px; color: #007bff;">{{ code }}</strong>
+    </p>
+    <p>Ce code expirera à <strong>{{ expires_at|date:"H:i" }}</strong>.</p>
+    <p>Si vous n'êtes pas à l'origine de cette tentative de connexion, ignorez simplement ce message.</p>
+    <br>
+    <p>— L'équipe {{ site_name }}</p>
+  </body>
+</html>
