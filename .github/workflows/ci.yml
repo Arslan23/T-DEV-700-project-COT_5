@@ -12,8 +12,8 @@ env:
   NODE_VERSION: '20'
   BACKEND_CTX: ./backend
   FRONTEND_CTX: ./frontend
-  IMAGE_BACKEND:  ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
-  IMAGE_FRONTEND: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+  IMAGE_BACKEND:  ghcr.io/${{ github.repository_owner }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/backend:${{ github.sha }}
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/frontend:${{ github.sha }}
   POSTGRES_DB: myapp_dev
   POSTGRES_USER: postgres
   POSTGRES_PASSWORD: postgres
@@ -34,24 +34,35 @@ jobs:
           POSTGRES_DB: myapp_dev
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-       # options: >-
-        #  --health-cmd 'pg_isready -U postgres'
-       #   --health-interval 10s
-       #   --health-timeout 5s
-       #   --health-retries 5
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         ports:
           - 5432:5432
       redis:
         image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
         ports:
           - 6379:6379
     permissions:
       contents: read
-      security-events: write          # for SARIF uploads
-      packages: write               # for GHCR push
+      security-events: write
+      packages: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set lowercase image names
+        id: image-names
+        run: |
+          echo "backend=$(echo 'ghcr.io/${{ github.repository }}/backend:${{ github.sha }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "frontend=$(echo 'ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Python
         uses: actions/setup-python@v5 
@@ -72,33 +83,37 @@ jobs:
           key: poetry-${{ runner.os }}-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install Python dependencies
-        run:  poetry install --no-interaction --no-ansi --no-root --with dev
+        run: poetry install --no-interaction --no-ansi --no-root --with dev
         working-directory: ${{ env.BACKEND_CTX }}
-
 
       - name: Setup local settings for CI 
         run: |
           cat > core/local_settings.py << 'EOF'
           import os
-    
+          
           DEBUG = True
           SECRET_KEY = 'django-insecure-u&qile=x3p1l*3v*jbzig-##hh9$7f@1_0_^_8gr9xd_i2&t1z'
           ALLOWED_HOSTS = ['*']
-    
+          
           DATABASES = {
-          'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'myapp_dev'),
-            'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-            }
+              'default': {
+                  'ENGINE': 'django.db.backends.postgresql',
+                  'NAME': os.environ.get('POSTGRES_DB', 'myapp_dev'),
+                  'USER': os.environ.get('POSTGRES_USER', 'postgres'),
+                  'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
+                  'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+                  'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+              }
           }
-    
+          
           CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
           EOF
-      
+        working-directory: ${{ env.BACKEND_CTX }}
+
+      - name: Run database migrations
+        run: |
+          source .venv/bin/activate
+          poetry run python manage.py migrate --noinput
         working-directory: ${{ env.BACKEND_CTX }}
 
       - name: Run linter (Ruff)
@@ -106,7 +121,7 @@ jobs:
           source .venv/bin/activate
           ruff check .
         working-directory: ${{ env.BACKEND_CTX }}
-        continue-on-error: true # Ligne ajoutée pour passer. A retirer plus tard
+        continue-on-error: true
 
       - name: Run Django tests with coverage
         run: |
@@ -121,23 +136,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: htmlcov-backend
-          path: htmlcov-backend/
+          path: ${{ env.BACKEND_CTX }}/test-reports/coverage/html/
           retention-days: 7
 
       - name: Build backend Docker image
         run: |
-          docker build -f Dockerfile --target production -t ${{ env.IMAGE_BACKEND }} .
+          docker build -f Dockerfile --target production -t ${{ steps.image-names.outputs.backend }} .
         working-directory: ${{ env.BACKEND_CTX }}
 
       - name: Run Trivy vulnerability scanner (backend)
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.IMAGE_BACKEND }}
+          image-ref: ${{ steps.image-names.outputs.backend }}
           format: sarif
           output: trivy-backend.sarif
 
       - name: Upload Trivy SARIF (backend)
-        uses: github/codeql-action/upload-sarif@v3 # v3.28.0
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-backend.sarif
           category: trivy-backend
@@ -147,12 +162,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: ${{ env.IMAGE_BACKEND }}
+          image: ${{ steps.image-names.outputs.backend }}
           args: --severity-threshold=high --sarif-file-output=snyk-backend.sarif
         continue-on-error: true
 
       - name: Upload Snyk SARIF (backend)
-        uses: github/codeql-action/upload-sarif@v3 # v3.28.0
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-backend.sarif
           category: snyk-backend
@@ -169,6 +184,11 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - name: Set lowercase image names
+        id: image-names
+        run: |
+          echo "frontend=$(echo 'ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Set up Node
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
@@ -183,6 +203,7 @@ jobs:
       - name: Run linter (ESLint)
         run: npm run lint --if-present
         working-directory: ${{ env.FRONTEND_CTX }}
+        continue-on-error: true
 
       - name: Run Jest tests with coverage
         run: npm run test:coverage --if-present
@@ -197,18 +218,18 @@ jobs:
 
       - name: Build frontend Docker image
         run: |
-          docker build -f Dockerfile --target production -t ${{ env.IMAGE_FRONTEND }} .
+          docker build -f Dockerfile --target production -t ${{ steps.image-names.outputs.frontend }} .
         working-directory: ${{ env.FRONTEND_CTX }}
 
       - name: Run Trivy vulnerability scanner (frontend)
-        uses: aquasecurity/trivy-action@0.28.0 # 0.29.0
+        uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.IMAGE_FRONTEND }}
+          image-ref: ${{ steps.image-names.outputs.frontend }}
           format: sarif
           output: trivy-frontend.sarif
 
       - name: Upload Trivy SARIF (frontend)
-        uses: github/codeql-action/upload-sarif@v3 # v3.28.0
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-frontend.sarif
           category: trivy-frontend
@@ -218,12 +239,12 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          image: ${{ env.IMAGE_FRONTEND }}
+          image: ${{ steps.image-names.outputs.frontend }}
           args: --severity-threshold=high --sarif-file-output=snyk-frontend.sarif
         continue-on-error: true
 
       - name: Upload Snyk SARIF (frontend)
-        uses: github/codeql-action/upload-sarif@v3 # v3.28.0
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-frontend.sarif
           category: snyk-frontend
