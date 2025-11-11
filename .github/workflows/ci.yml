@@ -72,9 +72,12 @@ jobs:
           key: poetry-${{ runner.os }}-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install Python dependencies
-        run: |
-          cp local_settings_template.py local_settings.py
-          poetry install --no-interaction --no-ansi --no-root --with dev
+        run:  poetry install --no-interaction --no-ansi --no-root --with dev
+        working-directory: ${{ env.BACKEND_CTX }}
+
+
+      - name: Setup local settings
+        run: cp local_settings_template.py local_settings.py
         working-directory: ${{ env.BACKEND_CTX }}
 
       - name: Run linter (Ruff)
